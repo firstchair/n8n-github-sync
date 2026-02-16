@@ -1,0 +1,520 @@
+{
+  "name": "🔄 n8n ↔ GitHub Sync + Dashboard",
+  "nodes": [
+    {
+      "parameters": {
+        "width": 440,
+        "height": 280,
+        "content": "## ⚙️ Setup\n\n1. Open **Save Config** node, fill in values\n2. Click **Test step** (or set staticData via API)\n3. Activate workflow\n4. Open webhook URL in a **new browser tab**\n\n> Config is stored in workflow static data."
+      },
+      "id": "a0b1c2d3-e4f5-6789-abcd-000100000000",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -200,
+        -300
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "a0b1c2d3-e4f5-6789-abcd-000200000000",
+      "name": "Setup Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        80,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "var staticData = $getWorkflowStaticData('global');\n\nstaticData.github_owner   = 'YOUR_GITHUB_USERNAME';\nstaticData.github_repo    = 'n8n-workflows-backup';\nstaticData.github_branch  = 'main';\nstaticData.github_token   = 'ghp_YOUR_GITHUB_TOKEN';\nstaticData.n8n_base_url   = 'http://localhost:5678';\nstaticData.n8n_api_key    = 'YOUR_N8N_API_KEY';\nstaticData.base_path      = 'workflows';\n\nreturn [{\n  json: {\n    message: 'Config saved!',\n    config: {\n      github_owner: staticData.github_owner,\n      github_repo: staticData.github_repo,\n      n8n_base_url: staticData.n8n_base_url,\n      base_path: staticData.base_path\n    }\n  }\n}];",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "a0b1c2d3-e4f5-6789-abcd-000300000000",
+      "name": "Save Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "path": "github-sync",
+        "httpMethod": "GET",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a0b1c2d3-e4f5-6789-abcd-000400000000",
+      "name": "Dashboard Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        80,
+        100
+      ],
+      "webhookId": "a0b1c2d3-e4f5-6789-abcd-000500000000"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Dashboard: open in a NEW browser tab at the full webhook URL.\n// Do NOT use n8n built-in webhook preview (sandboxed iframe).\nvar items = $input.all();\nvar headers = items[0].json.headers || {};\nvar proto = headers['x-forwarded-proto'] || headers['x-forwarded-scheme'] || 'http';\nvar host = headers['host'] || 'localhost:5678';\nvar apiBase = proto + '://' + host + '/webhook/github-sync';\n\nvar html = Buffer.from('PCFET0NUWVBFIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KPGhlYWQ+CjxtZXRhIGNoYXJzZXQ9IlVURi04Ij4KPG1ldGEgbmFtZT0idmlld3BvcnQiIGNvbnRlbnQ9IndpZHRoPWRldmljZS13aWR0aCwgaW5pdGlhbC1zY2FsZT0xLjAiPgo8dGl0bGU+bjhuIEdpdEh1YiBTeW5jIERhc2hib2FyZDwvdGl0bGU+CjxzdHlsZT4KOnJvb3QgewogIC0tYmcwOiAjZmZmZmZmOyAtLWJnMTogI2Y2ZjhmYTsgLS1iZzI6ICNlOGVhZWQ7CiAgLS1ib3JkZXI6ICNkMGQ3ZGU7IC0tdHgxOiAjMWYyMzI4OyAtLXR4MjogIzY1NmQ3NjsKICAtLWFjY2VudDogIzA5NjlkYTsgLS1ncmVlbjogIzFhN2YzNzsgLS15ZWxsb3c6ICM5YTY3MDA7IC0tcmVkOiAjY2YyMjJlOwogIC0tb3ZlcmxheTogcmdiYSgwLDAsMCwwLjMpOyAtLWhvdmVyLXJvdzogcmdiYSgyNDYsMjQ4LDI1MCwwLjUpOwogIC0tYmFkZ2Utc3luY2VkLWJnOiByZ2JhKDI2LDEyNyw1NSwwLjEpOyAtLWJhZGdlLW44bi1iZzogcmdiYSgxNTQsMTAzLDAsMC4xKTsgLS1iYWRnZS1naXQtYmc6IHJnYmEoMjA3LDM0LDQ2LDAuMSk7CiAgLS10b2FzdC1zaGFkb3c6IHJnYmEoMCwwLDAsMC4xNSk7IC0tYnRuLXByaW1hcnktYmc6ICMxZjg4M2Q7IC0tYnRuLXByaW1hcnktaG92ZXI6ICMxYTdmMzc7Cn0KQG1lZGlhIChwcmVmZXJzLWNvbG9yLXNjaGVtZTogZGFyaykgewogIDpyb290IHsKICAgIC0tYmcwOiAjMGQxMTE3OyAtLWJnMTogIzE2MWIyMjsgLS1iZzI6ICMyMTI2MmQ7CiAgICAtLWJvcmRlcjogIzMwMzYzZDsgLS10eDE6ICNjOWQxZDk7IC0tdHgyOiAjOGI5NDllOwogICAgLS1hY2NlbnQ6ICM1OGE2ZmY7IC0tZ3JlZW46ICMzZmI5NTA7IC0teWVsbG93OiAjZDI5OTIyOyAtLXJlZDogI2Y4NTE0OTsKICAgIC0tb3ZlcmxheTogcmdiYSgwLDAsMCwwLjYpOyAtLWhvdmVyLXJvdzogcmdiYSgyMiwyNywzNCwwLjUpOwogICAgLS1iYWRnZS1zeW5jZWQtYmc6IHJnYmEoNjMsMTg1LDgwLDAuMTUpOyAtLWJhZGdlLW44bi1iZzogcmdiYSgyMTAsMTUzLDM0LDAuMTUpOyAtLWJhZGdlLWdpdC1iZzogcmdiYSgyNDgsODEsNzMsMC4xNSk7CiAgICAtLXRvYXN0LXNoYWRvdzogcmdiYSgwLDAsMCwwLjQpOyAtLWJ0bi1wcmltYXJ5LWJnOiAjMjM4NjM2OyAtLWJ0bi1wcmltYXJ5LWhvdmVyOiAjMmVhMDQzOwogIH0KfQoqIHsgbWFyZ2luOiAwOyBwYWRkaW5nOiAwOyBib3gtc2l6aW5nOiBib3JkZXItYm94OyB9CmJvZHkgeyBiYWNrZ3JvdW5kOiB2YXIoLS1iZzApOyBjb2xvcjogdmFyKC0tdHgxKTsgZm9udC1mYW1pbHk6IC1hcHBsZS1zeXN0ZW0sIEJsaW5rTWFjU3lzdGVtRm9udCwgJ1NlZ29lIFVJJywgTm90byBTYW5zLCBIZWx2ZXRpY2EsIEFyaWFsLCBzYW5zLXNlcmlmOyBsaW5lLWhlaWdodDogMS41OyB9Ci5jb250YWluZXIgeyBtYXgtd2lkdGg6IDEyODBweDsgbWFyZ2luOiAwIGF1dG87IHBhZGRpbmc6IDI0cHg7IH0KLmhlYWRlciB7IG1hcmdpbi1ib3R0b206IDI0cHg7IH0KLmhlYWRlciBoMSB7IGZvbnQtc2l6ZTogMjRweDsgZm9udC13ZWlnaHQ6IDYwMDsgfQouaGVhZGVyIHAgeyBjb2xvcjogdmFyKC0tdHgyKTsgZm9udC1zaXplOiAxNHB4OyBtYXJnaW4tdG9wOiAycHg7IH0KLnN0YXRzIHsgZGlzcGxheTogZ3JpZDsgZ3JpZC10ZW1wbGF0ZS1jb2x1bW5zOiByZXBlYXQoNCwgMWZyKTsgZ2FwOiAxNnB4OyBtYXJnaW4tYm90dG9tOiAyNHB4OyB9Ci5zdGF0LWNhcmQgeyBiYWNrZ3JvdW5kOiB2YXIoLS1iZzEpOyBib3JkZXI6IDFweCBzb2xpZCB2YXIoLS1ib3JkZXIpOyBib3JkZXItcmFkaXVzOiA2cHg7IHBhZGRpbmc6IDE2cHg7IHRyYW5zaXRpb246IGJvcmRlci1jb2xvciAwLjJzOyB9Ci5zdGF0LWNhcmQ6aG92ZXIgeyBib3JkZXItY29sb3I6IHZhcigtLXR4Mik7IH0KLnN0YXQtY2FyZCAubGFiZWwgeyBmb250LXNpemU6IDEycHg7IGNvbG9yOiB2YXIoLS10eDIpOyB0ZXh0LXRyYW5zZm9ybTogdXBwZXJjYXNlOyBsZXR0ZXItc3BhY2luZzogMC41cHg7IH0KLnN0YXQtY2FyZCAudmFsdWUgeyBmb250LXNpemU6IDI4cHg7IGZvbnQtd2VpZ2h0OiA2MDA7IG1hcmdpbi10b3A6IDRweDsgfQouc3RhdC1jYXJkLnRvdGFsIC52YWx1ZSB7IGNvbG9yOiB2YXIoLS1hY2NlbnQpOyB9Ci5zdGF0LWNhcmQuc3luY2VkIC52YWx1ZSB7IGNvbG9yOiB2YXIoLS1ncmVlbik7IH0KLnN0YXQtY2FyZC5uOG4tb25seSAudmFsdWUgeyBjb2xvcjogdmFyKC0teWVsbG93KTsgfQouc3RhdC1jYXJkLmdpdC1vbmx5IC52YWx1ZSB7IGNvbG9yOiB2YXIoLS1yZWQpOyB9Ci50b29sYmFyIHsgZGlzcGxheTogZmxleDsganVzdGlmeS1jb250ZW50OiBzcGFjZS1iZXR3ZWVuOyBhbGlnbi1pdGVtczogY2VudGVyOyBtYXJnaW4tYm90dG9tOiAxNnB4OyBmbGV4LXdyYXA6IHdyYXA7IGdhcDogMTJweDsgfQoudG9vbGJhci1hY3Rpb25zIHsgZGlzcGxheTogZmxleDsgZ2FwOiA4cHg7IH0KLmJ0biB7IGRpc3BsYXk6IGlubGluZS1mbGV4OyBhbGlnbi1pdGVtczogY2VudGVyOyBnYXA6IDZweDsgcGFkZGluZzogNnB4IDE2cHg7IGJvcmRlci1yYWRpdXM6IDZweDsgYm9yZGVyOiAxcHggc29saWQgdmFyKC0tYm9yZGVyKTsgYmFja2dyb3VuZDogdmFyKC0tYmcxKTsgY29sb3I6IHZhcigtLXR4MSk7IGN1cnNvcjogcG9pbnRlcjsgZm9udC1zaXplOiAxNHB4OyBmb250LXdlaWdodDogNTAwOyB0cmFuc2l0aW9uOiBhbGwgMC4xNXM7IHRleHQtZGVjb3JhdGlvbjogbm9uZTsgd2hpdGUtc3BhY2U6IG5vd3JhcDsgfQouYnRuOmhvdmVyIHsgYmFja2dyb3VuZDogdmFyKC0tYmcyKTsgYm9yZGVyLWNvbG9yOiB2YXIoLS10eDIpOyB9Ci5idG4tcHJpbWFyeSB7IGJhY2tncm91bmQ6IHZhcigtLWJ0bi1wcmltYXJ5LWJnKTsgYm9yZGVyLWNvbG9yOiByZ2JhKDI0MCwyNDYsMjUyLDAuMSk7IGNvbG9yOiAjZmZmOyB9Ci5idG4tcHJpbWFyeTpob3ZlciB7IGJhY2tncm91bmQ6IHZhcigtLWJ0bi1wcmltYXJ5LWhvdmVyKTsgfQouYnRuLXNtIHsgcGFkZGluZzogNHB4IDEwcHg7IGZvbnQtc2l6ZTogMTJweDsgfQouYnRuOmRpc2FibGVkIHsgb3BhY2l0eTogMC41OyBjdXJzb3I6IG5vdC1hbGxvd2VkOyB9Ci50YWJzIHsgZGlzcGxheTogZmxleDsgfQoudGFiIHsgcGFkZGluZzogNnB4IDE2cHg7IGJvcmRlcjogMXB4IHNvbGlkIHZhcigtLWJvcmRlcik7IGJhY2tncm91bmQ6IHZhcigtLWJnMCk7IGNvbG9yOiB2YXIoLS10eDIpOyBjdXJzb3I6IHBvaW50ZXI7IGZvbnQtc2l6ZTogMTRweDsgYm9yZGVyLXJpZ2h0OiBub25lOyB0cmFuc2l0aW9uOiBhbGwgMC4xNXM7IH0KLnRhYjpmaXJzdC1jaGlsZCB7IGJvcmRlci1yYWRpdXM6IDZweCAwIDAgNnB4OyB9Ci50YWI6bGFzdC1jaGlsZCB7IGJvcmRlci1yYWRpdXM6IDAgNnB4IDZweCAwOyBib3JkZXItcmlnaHQ6IDFweCBzb2xpZCB2YXIoLS1ib3JkZXIpOyB9Ci50YWIuYWN0aXZlIHsgYmFja2dyb3VuZDogdmFyKC0tYmcxKTsgY29sb3I6IHZhcigtLXR4MSk7IH0KLnRhYjpob3ZlciB7IGNvbG9yOiB2YXIoLS10eDEpOyB9Ci50YWJsZS1jb250YWluZXIgeyBib3JkZXI6IDFweCBzb2xpZCB2YXIoLS1ib3JkZXIpOyBib3JkZXItcmFkaXVzOiA2cHg7IG92ZXJmbG93OiBoaWRkZW47IH0KdGFibGUgeyB3aWR0aDogMTAwJTsgYm9yZGVyLWNvbGxhcHNlOiBjb2xsYXBzZTsgfQp0aGVhZCB7IGJhY2tncm91bmQ6IHZhcigtLWJnMSk7IH0KdGggeyBwYWRkaW5nOiAxMnB4IDE2cHg7IHRleHQtYWxpZ246IGxlZnQ7IGZvbnQtc2l6ZTogMTJweDsgY29sb3I6IHZhcigtLXR4Mik7IHRleHQtdHJhbnNmb3JtOiB1cHBlcmNhc2U7IGxldHRlci1zcGFjaW5nOiAwLjVweDsgZm9udC13ZWlnaHQ6IDYwMDsgfQp0ZCB7IHBhZGRpbmc6IDEycHggMTZweDsgYm9yZGVyLXRvcDogMXB4IHNvbGlkIHZhcigtLWJvcmRlcik7IGZvbnQtc2l6ZTogMTRweDsgfQp0cjpob3ZlciB7IGJhY2tncm91bmQ6IHZhcigtLWhvdmVyLXJvdyk7IH0KLmJhZGdlIHsgZGlzcGxheTogaW5saW5lLWJsb2NrOyBwYWRkaW5nOiAycHggOHB4OyBib3JkZXItcmFkaXVzOiAxMnB4OyBmb250LXNpemU6IDEycHg7IGZvbnQtd2VpZ2h0OiA1MDA7IH0KLmJhZGdlLXN5bmNlZCB7IGJhY2tncm91bmQ6IHZhcigtLWJhZGdlLXN5bmNlZC1iZyk7IGNvbG9yOiB2YXIoLS1ncmVlbik7IH0KLmJhZGdlLW44bi1vbmx5IHsgYmFja2dyb3VuZDogdmFyKC0tYmFkZ2UtbjhuLWJnKTsgY29sb3I6IHZhcigtLXllbGxvdyk7IH0KLmJhZGdlLWdpdC1vbmx5IHsgYmFja2dyb3VuZDogdmFyKC0tYmFkZ2UtZ2l0LWJnKTsgY29sb3I6IHZhcigtLXJlZCk7IH0KLm1vZGFsLW92ZXJsYXkgeyBkaXNwbGF5OiBub25lOyBwb3NpdGlvbjogZml4ZWQ7IHRvcDogMDsgbGVmdDogMDsgcmlnaHQ6IDA7IGJvdHRvbTogMDsgYmFja2dyb3VuZDogdmFyKC0tb3ZlcmxheSk7IHotaW5kZXg6IDEwMDsganVzdGlmeS1jb250ZW50OiBjZW50ZXI7IGFsaWduLWl0ZW1zOiBjZW50ZXI7IH0KLm1vZGFsLW92ZXJsYXkuYWN0aXZlIHsgZGlzcGxheTogZmxleDsgfQoubW9kYWwgeyBiYWNrZ3JvdW5kOiB2YXIoLS1iZzEpOyBib3JkZXI6IDFweCBzb2xpZCB2YXIoLS1ib3JkZXIpOyBib3JkZXItcmFkaXVzOiAxMnB4OyB3aWR0aDogOTAlOyBtYXgtd2lkdGg6IDU2MHB4OyBtYXgtaGVpZ2h0OiA4MHZoOyBvdmVyZmxvdzogaGlkZGVuOyBkaXNwbGF5OiBmbGV4OyBmbGV4LWRpcmVjdGlvbjogY29sdW1uOyB9Ci5tb2RhbC13aWRlIHsgbWF4LXdpZHRoOiA2NDBweDsgfQoubW9kYWwtaGVhZGVyIHsgcGFkZGluZzogMTZweCAyMHB4OyBib3JkZXItYm90dG9tOiAxcHggc29saWQgdmFyKC0tYm9yZGVyKTsgZGlzcGxheTogZmxleDsganVzdGlmeS1jb250ZW50OiBzcGFjZS1iZXR3ZWVuOyBhbGlnbi1pdGVtczogY2VudGVyOyB9Ci5tb2RhbC1oZWFkZXIgaDMgeyBmb250LXNpemU6IDE2cHg7IGZvbnQtd2VpZ2h0OiA2MDA7IH0KLm1vZGFsLWNsb3NlIHsgYmFja2dyb3VuZDogbm9uZTsgYm9yZGVyOiBub25lOyBjb2xvcjogdmFyKC0tdHgyKTsgY3Vyc29yOiBwb2ludGVyOyBmb250LXNpemU6IDIwcHg7IHBhZGRpbmc6IDRweCA4cHg7IH0KLm1vZGFsLWNsb3NlOmhvdmVyIHsgY29sb3I6IHZhcigtLXR4MSk7IH0KLm1vZGFsLWJvZHkgeyBwYWRkaW5nOiAyMHB4OyBvdmVyZmxvdy15OiBhdXRvOyBmbGV4OiAxOyB9Ci5tb2RhbC1mb290ZXIgeyBwYWRkaW5nOiAxNnB4IDIwcHg7IGJvcmRlci10b3A6IDFweCBzb2xpZCB2YXIoLS1ib3JkZXIpOyBkaXNwbGF5OiBmbGV4OyBqdXN0aWZ5LWNvbnRlbnQ6IGZsZXgtZW5kOyBnYXA6IDhweDsgfQppbnB1dFt0eXBlPSJ0ZXh0Il0sIHRleHRhcmVhLCBzZWxlY3QgeyB3aWR0aDogMTAwJTsgcGFkZGluZzogOHB4IDEycHg7IGJvcmRlci1yYWRpdXM6IDZweDsgYm9yZGVyOiAxcHggc29saWQgdmFyKC0tYm9yZGVyKTsgYmFja2dyb3VuZDogdmFyKC0tYmcwKTsgY29sb3I6IHZhcigtLXR4MSk7IGZvbnQtc2l6ZTogMTRweDsgZm9udC1mYW1pbHk6IGluaGVyaXQ7IH0KaW5wdXQ6Zm9jdXMsIHRleHRhcmVhOmZvY3VzLCBzZWxlY3Q6Zm9jdXMgeyBvdXRsaW5lOiBub25lOyBib3JkZXItY29sb3I6IHZhcigtLWFjY2VudCk7IH0KdGV4dGFyZWEgeyByZXNpemU6IHZlcnRpY2FsOyBtaW4taGVpZ2h0OiA4MHB4OyB9CmxhYmVsIHsgZGlzcGxheTogYmxvY2s7IGZvbnQtc2l6ZTogMTRweDsgZm9udC13ZWlnaHQ6IDUwMDsgbWFyZ2luLWJvdHRvbTogNnB4OyB9Ci5mb3JtLWdyb3VwIHsgbWFyZ2luLWJvdHRvbTogMTZweDsgfQouY29tbWl0LWxpc3QgeyBsaXN0LXN0eWxlOiBub25lOyB9Ci5jb21taXQtaXRlbSB7IHBhZGRpbmc6IDEycHggMDsgYm9yZGVyLWJvdHRvbTogMXB4IHNvbGlkIHZhcigtLWJvcmRlcik7IGRpc3BsYXk6IGZsZXg7IGp1c3RpZnktY29udGVudDogc3BhY2UtYmV0d2VlbjsgYWxpZ24taXRlbXM6IGNlbnRlcjsgZ2FwOiAxMnB4OyB9Ci5jb21taXQtaXRlbTpsYXN0LWNoaWxkIHsgYm9yZGVyLWJvdHRvbTogbm9uZTsgfQouY29tbWl0LWluZm8geyBmbGV4OiAxOyBtaW4td2lkdGg6IDA7IH0KLmNvbW1pdC1zaGEgeyBmb250LWZhbWlseTogJ1NGTW9uby1SZWd1bGFyJywgQ29uc29sYXMsIG1vbm9zcGFjZTsgZm9udC1zaXplOiAxMnB4OyBjb2xvcjogdmFyKC0tYWNjZW50KTsgfQouY29tbWl0LW1zZyB7IGZvbnQtc2l6ZTogMTRweDsgbWFyZ2luOiAycHggMDsgd2hpdGUtc3BhY2U6IG5vd3JhcDsgb3ZlcmZsb3c6IGhpZGRlbjsgdGV4dC1vdmVyZmxvdzogZWxsaXBzaXM7IH0KLmNvbW1pdC1tZXRhIHsgZm9udC1zaXplOiAxMnB4OyBjb2xvcjogdmFyKC0tdHgyKTsgfQoucmFkaW8tZ3JvdXAgeyBkaXNwbGF5OiBmbGV4OyBmbGV4LWRpcmVjdGlvbjogY29sdW1uOyBnYXA6IDhweDsgfQoucmFkaW8tb3B0aW9uIHsgZGlzcGxheTogZmxleDsgYWxpZ24taXRlbXM6IGNlbnRlcjsgZ2FwOiA4cHg7IHBhZGRpbmc6IDEycHg7IGJvcmRlcjogMXB4IHNvbGlkIHZhcigtLWJvcmRlcik7IGJvcmRlci1yYWRpdXM6IDZweDsgY3Vyc29yOiBwb2ludGVyOyB0cmFuc2l0aW9uOiBib3JkZXItY29sb3IgMC4xNXM7IH0KLnJhZGlvLW9wdGlvbjpob3ZlciB7IGJvcmRlci1jb2xvcjogdmFyKC0tYWNjZW50KTsgfQoucmFkaW8tb3B0aW9uIGlucHV0IHsgYWNjZW50LWNvbG9yOiB2YXIoLS1hY2NlbnQpOyB9Ci50b2FzdC1jb250YWluZXIgeyBwb3NpdGlvbjogZml4ZWQ7IHRvcDogMjBweDsgcmlnaHQ6IDIwcHg7IHotaW5kZXg6IDIwMDsgZGlzcGxheTogZmxleDsgZmxleC1kaXJlY3Rpb246IGNvbHVtbjsgZ2FwOiA4cHg7IH0KLnRvYXN0IHsgcGFkZGluZzogMTJweCAyMHB4OyBib3JkZXItcmFkaXVzOiA2cHg7IGZvbnQtc2l6ZTogMTRweDsgYW5pbWF0aW9uOiBzbGlkZUluIDAuM3MgZWFzZTsgbWluLXdpZHRoOiAyODBweDsgYm9yZGVyOiAxcHggc29saWQgdmFyKC0tYm9yZGVyKTsgYm94LXNoYWRvdzogMCA0cHggMTJweCB2YXIoLS10b2FzdC1zaGFkb3cpOyB9Ci50b2FzdC1zdWNjZXNzIHsgYmFja2dyb3VuZDogdmFyKC0tYmFkZ2Utc3luY2VkLWJnKTsgY29sb3I6IHZhcigtLWdyZWVuKTsgYm9yZGVyLWNvbG9yOiB2YXIoLS1ncmVlbik7IH0KLnRvYXN0LWVycm9yIHsgYmFja2dyb3VuZDogdmFyKC0tYmFkZ2UtZ2l0LWJnKTsgY29sb3I6IHZhcigtLXJlZCk7IGJvcmRlci1jb2xvcjogdmFyKC0tcmVkKTsgfQoudG9hc3QtaW5mbyB7IGJhY2tncm91bmQ6IHJnYmEoODgsMTY2LDI1NSwwLjE1KTsgY29sb3I6IHZhcigtLWFjY2VudCk7IGJvcmRlci1jb2xvcjogdmFyKC0tYWNjZW50KTsgfQpAa2V5ZnJhbWVzIHNsaWRlSW4geyBmcm9tIHsgdHJhbnNmb3JtOiB0cmFuc2xhdGVYKDEwMCUpOyBvcGFjaXR5OiAwOyB9IHRvIHsgdHJhbnNmb3JtOiB0cmFuc2xhdGVYKDApOyBvcGFjaXR5OiAxOyB9IH0KLmxvYWRpbmcgeyB0ZXh0LWFsaWduOiBjZW50ZXI7IHBhZGRpbmc6IDQwcHg7IGNvbG9yOiB2YXIoLS10eDIpOyB9Ci5zcGlubmVyIHsgZGlzcGxheTogaW5saW5lLWJsb2NrOyB3aWR0aDogMjBweDsgaGVpZ2h0OiAyMHB4OyBib3JkZXI6IDJweCBzb2xpZCB2YXIoLS1ib3JkZXIpOyBib3JkZXItdG9wLWNvbG9yOiB2YXIoLS1hY2NlbnQpOyBib3JkZXItcmFkaXVzOiA1MCU7IGFuaW1hdGlvbjogc3BpbiAwLjZzIGxpbmVhciBpbmZpbml0ZTsgdmVydGljYWwtYWxpZ246IG1pZGRsZTsgbWFyZ2luLXJpZ2h0OiA4cHg7IH0KQGtleWZyYW1lcyBzcGluIHsgdG8geyB0cmFuc2Zvcm06IHJvdGF0ZSgzNjBkZWcpOyB9IH0KLmVtcHR5IHsgdGV4dC1hbGlnbjogY2VudGVyOyBwYWRkaW5nOiA0MHB4OyBjb2xvcjogdmFyKC0tdHgyKTsgfQpjb2RlIHsgZm9udC1mYW1pbHk6ICdTRk1vbm8tUmVndWxhcicsIENvbnNvbGFzLCBtb25vc3BhY2U7IGZvbnQtc2l6ZTogMTJweDsgYmFja2dyb3VuZDogdmFyKC0tYmcyKTsgcGFkZGluZzogMnB4IDZweDsgYm9yZGVyLXJhZGl1czogNHB4OyB9Ci5hY3Rpb25zLWNlbGwgeyBkaXNwbGF5OiBmbGV4OyBnYXA6IDRweDsgfQpAbWVkaWEgKG1heC13aWR0aDogNzY4cHgpIHsgLnN0YXRzIHsgZ3JpZC10ZW1wbGF0ZS1jb2x1bW5zOiByZXBlYXQoMiwgMWZyKTsgfSAudG9vbGJhciB7IGZsZXgtZGlyZWN0aW9uOiBjb2x1bW47IGFsaWduLWl0ZW1zOiBzdHJldGNoOyB9IH0KPC9zdHlsZT4KPC9oZWFkPgo8Ym9keT4KPGRpdiBjbGFzcz0iY29udGFpbmVyIj4KICA8ZGl2IGNsYXNzPSJoZWFkZXIiPgogICAgPGgxPiYjMTI4MjYwOyBuOG4gJiM4NTk2OyBHaXRIdWIgU3luYzwvaDE+CiAgICA8cD5NYW5hZ2UgYW5kIHN5bmNocm9uaXplIHlvdXIgbjhuIHdvcmtmbG93cyB3aXRoIEdpdEh1YjwvcD4KICA8L2Rpdj4KICA8ZGl2IGNsYXNzPSJzdGF0cyI+CiAgICA8ZGl2IGNsYXNzPSJzdGF0LWNhcmQgdG90YWwiPjxkaXYgY2xhc3M9ImxhYmVsIj5Ub3RhbCBXb3JrZmxvd3M8L2Rpdj48ZGl2IGNsYXNzPSJ2YWx1ZSIgaWQ9InN0YXQtdG90YWwiPiYjODIxMjs8L2Rpdj48L2Rpdj4KICAgIDxkaXYgY2xhc3M9InN0YXQtY2FyZCBzeW5jZWQiPjxkaXYgY2xhc3M9ImxhYmVsIj5TeW5jZWQ8L2Rpdj48ZGl2IGNsYXNzPSJ2YWx1ZSIgaWQ9InN0YXQtc3luY2VkIj4mIzgyMTI7PC9kaXY+PC9kaXY+CiAgICA8ZGl2IGNsYXNzPSJzdGF0LWNhcmQgbjhuLW9ubHkiPjxkaXYgY2xhc3M9ImxhYmVsIj5uOG4gT25seTwvZGl2PjxkaXYgY2xhc3M9InZhbHVlIiBpZD0ic3RhdC1uOG4iPiYjODIxMjs8L2Rpdj48L2Rpdj4KICAgIDxkaXYgY2xhc3M9InN0YXQtY2FyZCBnaXQtb25seSI+PGRpdiBjbGFzcz0ibGFiZWwiPkdpdEh1YiBPbmx5PC9kaXY+PGRpdiBjbGFzcz0idmFsdWUiIGlkPSJzdGF0LWdpdCI+JiM4MjEyOzwvZGl2PjwvZGl2PgogIDwvZGl2PgogIDxkaXYgY2xhc3M9InRvb2xiYXIiPgogICAgPGRpdiBjbGFzcz0idG9vbGJhci1hY3Rpb25zIj4KICAgICAgPGJ1dHRvbiBjbGFzcz0iYnRuIGJ0bi1wcmltYXJ5IiBpZD0ic3luYy1hbGwtYnRuIiBkYXRhLWFjdGlvbj0ic3luYy1hbGwiPiYjMTEwMTQ7JiM2NTAzOTsgU3luYyBBbGwgdG8gR2l0SHViPC9idXR0b24+CiAgICAgIDxidXR0b24gY2xhc3M9ImJ0biIgZGF0YS1hY3Rpb249InJlZnJlc2giPiYjMTI4MjYwOyBSZWZyZXNoPC9idXR0b24+CiAgICA8L2Rpdj4KICAgIDxkaXYgY2xhc3M9InRhYnMiIGlkPSJmaWx0ZXItdGFicyI+CiAgICAgIDxkaXYgY2xhc3M9InRhYiBhY3RpdmUiIGRhdGEtZmlsdGVyPSJhbGwiPkFsbDwvZGl2PgogICAgICA8ZGl2IGNsYXNzPSJ0YWIiIGRhdGEtZmlsdGVyPSJzeW5jZWQiPlN5bmNlZDwvZGl2PgogICAgICA8ZGl2IGNsYXNzPSJ0YWIiIGRhdGEtZmlsdGVyPSJuOG4tb25seSI+bjhuIE9ubHk8L2Rpdj4KICAgICAgPGRpdiBjbGFzcz0idGFiIiBkYXRhLWZpbHRlcj0iZ2l0LW9ubHkiPkdpdEh1YiBPbmx5PC9kaXY+CiAgICA8L2Rpdj4KICA8L2Rpdj4KICA8ZGl2IGNsYXNzPSJ0YWJsZS1jb250YWluZXIiPgogICAgPHRhYmxlPgogICAgICA8dGhlYWQ+PHRyPjx0aD5Xb3JrZmxvdzwvdGg+PHRoPklEPC90aD48dGg+U3RhdHVzPC90aD48dGg+QWN0aXZlPC90aD48dGg+TGFzdCBNb2RpZmllZDwvdGg+PHRoPkFjdGlvbnM8L3RoPjwvdHI+PC90aGVhZD4KICAgICAgPHRib2R5IGlkPSJ3b3JrZmxvdy10YWJsZSI+PHRyPjx0ZCBjb2xzcGFuPSI2IiBjbGFzcz0ibG9hZGluZyI+PHNwYW4gY2xhc3M9InNwaW5uZXIiPjwvc3Bhbj4gTG9hZGluZyB3b3JrZmxvd3MuLi48L3RkPjwvdHI+PC90Ym9keT4KICAgIDwvdGFibGU+CiAgPC9kaXY+CjwvZGl2Pgo8ZGl2IGNsYXNzPSJtb2RhbC1vdmVybGF5IiBpZD0icHVzaC1tb2RhbCI+PGRpdiBjbGFzcz0ibW9kYWwiPgogIDxkaXYgY2xhc3M9Im1vZGFsLWhlYWRlciI+PGgzPiYjMTEwMTQ7JiM2NTAzOTsgUHVzaCB0byBHaXRIdWI8L2gzPjxidXR0b24gY2xhc3M9Im1vZGFsLWNsb3NlIiBkYXRhLWFjdGlvbj0iY2xvc2UtbW9kYWwiIGRhdGEtbW9kYWw9InB1c2gtbW9kYWwiPiYjMTAwMDU7PC9idXR0b24+PC9kaXY+CiAgPGRpdiBjbGFzcz0ibW9kYWwtYm9keSI+CiAgICA8ZGl2IGNsYXNzPSJmb3JtLWdyb3VwIj48bGFiZWw+V29ya2Zsb3c8L2xhYmVsPjxpbnB1dCB0eXBlPSJ0ZXh0IiBpZD0icHVzaC13Zi1uYW1lIiByZWFkb25seT48L2Rpdj4KICAgIDxkaXYgY2xhc3M9ImZvcm0tZ3JvdXAiPjxsYWJlbD5Db21taXQgTWVzc2FnZTwvbGFiZWw+PHRleHRhcmVhIGlkPSJwdXNoLWNvbW1pdC1tc2ciIHBsYWNlaG9sZGVyPSJEZXNjcmliZSB5b3VyIGNoYW5nZXMuLi4iPjwvdGV4dGFyZWE+PC9kaXY+CiAgPC9kaXY+CiAgPGRpdiBjbGFzcz0ibW9kYWwtZm9vdGVyIj48YnV0dG9uIGNsYXNzPSJidG4iIGRhdGEtYWN0aW9uPSJjbG9zZS1tb2RhbCIgZGF0YS1tb2RhbD0icHVzaC1tb2RhbCI+Q2FuY2VsPC9idXR0b24+PGJ1dHRvbiBjbGFzcz0iYnRuIGJ0bi1wcmltYXJ5IiBpZD0icHVzaC1jb25maXJtLWJ0biIgZGF0YS1hY3Rpb249ImNvbmZpcm0tcHVzaCI+UHVzaDwvYnV0dG9uPjwvZGl2Pgo8L2Rpdj48L2Rpdj4KPGRpdiBjbGFzcz0ibW9kYWwtb3ZlcmxheSIgaWQ9Imhpc3RvcnktbW9kYWwiPjxkaXYgY2xhc3M9Im1vZGFsIG1vZGFsLXdpZGUiPgogIDxkaXYgY2xhc3M9Im1vZGFsLWhlYWRlciI+PGgzPiYjMTI4MjIwOyBDb21taXQgSGlzdG9yeTwvaDM+PGJ1dHRvbiBjbGFzcz0ibW9kYWwtY2xvc2UiIGRhdGEtYWN0aW9uPSJjbG9zZS1tb2RhbCIgZGF0YS1tb2RhbD0iaGlzdG9yeS1tb2RhbCI+JiMxMDAwNTs8L2J1dHRvbj48L2Rpdj4KICA8ZGl2IGNsYXNzPSJtb2RhbC1ib2R5Ij48ZGl2IGlkPSJoaXN0b3J5LWNvbnRlbnQiPjxkaXYgY2xhc3M9ImxvYWRpbmciPjxzcGFuIGNsYXNzPSJzcGlubmVyIj48L3NwYW4+IExvYWRpbmcuLi48L2Rpdj48L2Rpdj48L2Rpdj4KPC9kaXY+PC9kaXY+CjxkaXYgY2xhc3M9Im1vZGFsLW92ZXJsYXkiIGlkPSJyZXN0b3JlLW1vZGFsIj48ZGl2IGNsYXNzPSJtb2RhbCI+CiAgPGRpdiBjbGFzcz0ibW9kYWwtaGVhZGVyIj48aDM+JiMxMTAxNTsmIzY1MDM5OyBSZXN0b3JlIGZyb20gR2l0SHViPC9oMz48YnV0dG9uIGNsYXNzPSJtb2RhbC1jbG9zZSIgZGF0YS1hY3Rpb249ImNsb3NlLW1vZGFsIiBkYXRhLW1vZGFsPSJyZXN0b3JlLW1vZGFsIj4mIzEwMDA1OzwvYnV0dG9uPjwvZGl2PgogIDxkaXYgY2xhc3M9Im1vZGFsLWJvZHkiPgogICAgPGRpdiBjbGFzcz0iZm9ybS1ncm91cCI+PGxhYmVsPldvcmtmbG93PC9sYWJlbD48aW5wdXQgdHlwZT0idGV4dCIgaWQ9InJlc3RvcmUtd2YtbmFtZSIgcmVhZG9ubHk+PC9kaXY+CiAgICA8ZGl2IGNsYXNzPSJmb3JtLWdyb3VwIj48bGFiZWw+SW1wb3J0IE1vZGU8L2xhYmVsPgogICAgICA8ZGl2IGNsYXNzPSJyYWRpby1ncm91cCI+CiAgICAgICAgPGxhYmVsIGNsYXNzPSJyYWRpby1vcHRpb24iPjxpbnB1dCB0eXBlPSJyYWRpbyIgbmFtZT0icmVzdG9yZS1tb2RlIiB2YWx1ZT0ibmV3IiBjaGVja2VkPiBJbXBvcnQgYXMgbmV3IHdvcmtmbG93PC9sYWJlbD4KICAgICAgICA8bGFiZWwgY2xhc3M9InJhZGlvLW9wdGlvbiI+PGlucHV0IHR5cGU9InJhZGlvIiBuYW1lPSJyZXN0b3JlLW1vZGUiIHZhbHVlPSJyZXBsYWNlIj4gUmVwbGFjZSBleGlzdGluZyB3b3JrZmxvdzwvbGFiZWw+CiAgICAgIDwvZGl2PgogICAgPC9kaXY+CiAgICA8ZGl2IGNsYXNzPSJmb3JtLWdyb3VwIiBpZD0icmVzdG9yZS10YXJnZXQtZ3JvdXAiIHN0eWxlPSJkaXNwbGF5Om5vbmUiPjxsYWJlbD5UYXJnZXQgV29ya2Zsb3cgSUQ8L2xhYmVsPjxpbnB1dCB0eXBlPSJ0ZXh0IiBpZD0icmVzdG9yZS10YXJnZXQtaWQiIHBsYWNlaG9sZGVyPSJXb3JrZmxvdyBJRCB0byByZXBsYWNlIj48L2Rpdj4KICAgIDxkaXYgY2xhc3M9ImZvcm0tZ3JvdXAiPjxsYWJlbD5WZXJzaW9uPC9sYWJlbD48c2VsZWN0IGlkPSJyZXN0b3JlLWNvbW1pdCI+PG9wdGlvbiB2YWx1ZT0iIj5MYXRlc3QgdmVyc2lvbjwvb3B0aW9uPjwvc2VsZWN0PjwvZGl2PgogIDwvZGl2PgogIDxkaXYgY2xhc3M9Im1vZGFsLWZvb3RlciI+PGJ1dHRvbiBjbGFzcz0iYnRuIiBkYXRhLWFjdGlvbj0iY2xvc2UtbW9kYWwiIGRhdGEtbW9kYWw9InJlc3RvcmUtbW9kYWwiPkNhbmNlbDwvYnV0dG9uPjxidXR0b24gY2xhc3M9ImJ0biBidG4tcHJpbWFyeSIgZGF0YS1hY3Rpb249ImNvbmZpcm0tcmVzdG9yZSI+UmVzdG9yZTwvYnV0dG9uPjwvZGl2Pgo8L2Rpdj48L2Rpdj4KPGRpdiBjbGFzcz0idG9hc3QtY29udGFpbmVyIiBpZD0idG9hc3QtY29udGFpbmVyIj48L2Rpdj4KPHNjcmlwdD4KKGZ1bmN0aW9uKCkgewogIHZhciBBUElfQkFTRSA9ICdfX0FQSV9CQVNFX18nOwogIHZhciB3b3JrZmxvd3MgPSBbXTsKICB2YXIgY3VycmVudEZpbHRlciA9ICdhbGwnOwogIHZhciBwdXNoV29ya2Zsb3dJZCA9ICcnOwoKICBmZXRjaFN0YXR1cygpOwoKICBkb2N1bWVudC5hZGRFdmVudExpc3RlbmVyKCdjbGljaycsIGZ1bmN0aW9uKGUpIHsKICAgIHZhciBlbCA9IGUudGFyZ2V0LmNsb3Nlc3QoJ1tkYXRhLWFjdGlvbl0nKTsKICAgIGlmICghZWwpIHsKICAgICAgdmFyIG92ZXJsYXkgPSBlLnRhcmdldC5jbG9zZXN0KCcubW9kYWwtb3ZlcmxheScpOwogICAgICBpZiAob3ZlcmxheSAmJiBlLnRhcmdldCA9PT0gb3ZlcmxheSkgb3ZlcmxheS5jbGFzc0xpc3QucmVtb3ZlKCdhY3RpdmUnKTsKICAgICAgdmFyIHRhYiA9IGUudGFyZ2V0LmNsb3Nlc3QoJ1tkYXRhLWZpbHRlcl0nKTsKICAgICAgaWYgKHRhYikgewogICAgICAgIGN1cnJlbnRGaWx0ZXIgPSB0YWIuZ2V0QXR0cmlidXRlKCdkYXRhLWZpbHRlcicpOwogICAgICAgIHZhciB0YWJzID0gZG9jdW1lbnQucXVlcnlTZWxlY3RvckFsbCgnLnRhYicpOwogICAgICAgIGZvciAodmFyIGkgPSAwOyBpIDwgdGFicy5sZW5ndGg7IGkrKykgdGFic1tpXS5jbGFzc0xpc3QucmVtb3ZlKCdhY3RpdmUnKTsKICAgICAgICB0YWIuY2xhc3NMaXN0LmFkZCgnYWN0aXZlJyk7CiAgICAgICAgcmVuZGVyVGFibGUoKTsKICAgICAgfQogICAgICByZXR1cm47CiAgICB9CiAgICB2YXIgYSA9IGVsLmdldEF0dHJpYnV0ZSgnZGF0YS1hY3Rpb24nKTsKICAgIGlmIChhID09PSAnc3luYy1hbGwnKSBzeW5jQWxsKCk7CiAgICBlbHNlIGlmIChhID09PSAncmVmcmVzaCcpIGZldGNoU3RhdHVzKCk7CiAgICBlbHNlIGlmIChhID09PSAnY2xvc2UtbW9kYWwnKSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZChlbC5nZXRBdHRyaWJ1dGUoJ2RhdGEtbW9kYWwnKSkuY2xhc3NMaXN0LnJlbW92ZSgnYWN0aXZlJyk7CiAgICBlbHNlIGlmIChhID09PSAnY29uZmlybS1wdXNoJykgY29uZmlybVB1c2goKTsKICAgIGVsc2UgaWYgKGEgPT09ICdjb25maXJtLXJlc3RvcmUnKSBjb25maXJtUmVzdG9yZSgpOwogICAgZWxzZSBpZiAoYSA9PT0gJ3B1c2gnKSBzaG93UHVzaChlbC5nZXRBdHRyaWJ1dGUoJ2RhdGEtaWQnKSwgZWwuZ2V0QXR0cmlidXRlKCdkYXRhLW5hbWUnKSk7CiAgICBlbHNlIGlmIChhID09PSAnaGlzdG9yeScpIHNob3dIaXN0KGVsLmdldEF0dHJpYnV0ZSgnZGF0YS1wYXRoJyksIGVsLmdldEF0dHJpYnV0ZSgnZGF0YS1uYW1lJykpOwogICAgZWxzZSBpZiAoYSA9PT0gJ3Jlc3RvcmUnKSBzaG93UmVzdG9yZShlbC5nZXRBdHRyaWJ1dGUoJ2RhdGEtcGF0aCcpLCBlbC5nZXRBdHRyaWJ1dGUoJ2RhdGEtbmFtZScpLCBlbC5nZXRBdHRyaWJ1dGUoJ2RhdGEtaWQnKSB8fCAnJyk7CiAgICBlbHNlIGlmIChhID09PSAncmVzdG9yZS1jb21taXQnKSB7CiAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdoaXN0b3J5LW1vZGFsJykuY2xhc3NMaXN0LnJlbW92ZSgnYWN0aXZlJyk7CiAgICAgIHNob3dSZXN0b3JlKGVsLmdldEF0dHJpYnV0ZSgnZGF0YS1wYXRoJyksICcnLCAnJyk7CiAgICAgIHZhciBzaGEgPSBlbC5nZXRBdHRyaWJ1dGUoJ2RhdGEtc2hhJyk7CiAgICAgIHNldFRpbWVvdXQoZnVuY3Rpb24oKSB7IHZhciBzID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3Jlc3RvcmUtY29tbWl0Jyk7IGZvciAodmFyIGkgPSAwOyBpIDwgcy5vcHRpb25zLmxlbmd0aDsgaSsrKSB7IGlmIChzLm9wdGlvbnNbaV0udmFsdWUgPT09IHNoYSkgeyBzLnNlbGVjdGVkSW5kZXggPSBpOyBicmVhazsgfSB9IH0sIDgwMCk7CiAgICB9CiAgfSk7CgogIGRvY3VtZW50LmFkZEV2ZW50TGlzdGVuZXIoJ2NoYW5nZScsIGZ1bmN0aW9uKGUpIHsKICAgIGlmIChlLnRhcmdldC5uYW1lID09PSAncmVzdG9yZS1tb2RlJykgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3Jlc3RvcmUtdGFyZ2V0LWdyb3VwJykuc3R5bGUuZGlzcGxheSA9IGUudGFyZ2V0LnZhbHVlID09PSAncmVwbGFjZScgPyAnYmxvY2snIDogJ25vbmUnOwogIH0pOwoKICBmdW5jdGlvbiBmZXRjaFN0YXR1cygpIHsKICAgIHZhciB0Ym9keSA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCd3b3JrZmxvdy10YWJsZScpOwogICAgdGJvZHkuaW5uZXJIVE1MID0gJzx0cj48dGQgY29sc3Bhbj0iNiIgY2xhc3M9ImxvYWRpbmciPjxzcGFuIGNsYXNzPSJzcGlubmVyIj48L3NwYW4+IExvYWRpbmcuLi48L3RkPjwvdHI+JzsKICAgIGFwaUdldCgnL2FwaS9zdGF0dXMnLCBmdW5jdGlvbihkYXRhKSB7CiAgICAgIGlmIChkYXRhLmVycm9yKSB7IHRvYXN0KGRhdGEuZXJyb3IsICdlcnJvcicpOyByZXR1cm47IH0KICAgICAgd29ya2Zsb3dzID0gZGF0YS53b3JrZmxvd3MgfHwgW107CiAgICAgIHJlbmRlclN0YXRzKCk7IHJlbmRlclRhYmxlKCk7CiAgICB9LCBmdW5jdGlvbihlcnIpIHsKICAgICAgdG9hc3QoJ0ZhaWxlZCB0byBsb2FkOiAnICsgZXJyLCAnZXJyb3InKTsKICAgICAgdGJvZHkuaW5uZXJIVE1MID0gJzx0cj48dGQgY29sc3Bhbj0iNiIgY2xhc3M9ImVtcHR5Ij5GYWlsZWQgdG8gbG9hZC4gQ2hlY2sgQ29uZmlnIG5vZGUuPC90ZD48L3RyPic7CiAgICB9KTsKICB9CgogIGZ1bmN0aW9uIHN5bmNBbGwoKSB7CiAgICB2YXIgYnRuID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3N5bmMtYWxsLWJ0bicpOwogICAgYnRuLmRpc2FibGVkID0gdHJ1ZTsgYnRuLnRleHRDb250ZW50ID0gJ+KPsyBTeW5jaW5nLi4uJzsKICAgIGFwaVBvc3QoJy9hcGkvc3luYy1hbGwnLCB7fSwgZnVuY3Rpb24oZCkgewogICAgICBpZiAoZC5lcnJvcikgdG9hc3QoZC5lcnJvciwgJ2Vycm9yJyk7CiAgICAgIGVsc2UgeyB0b2FzdCgnU3luY2VkICcgKyAoZC5zeW5jZWR8fDApICsgJyB3b3JrZmxvd3MgKCcgKyAoZC5jcmVhdGVkfHwwKSArICcgbmV3LCAnICsgKGQudXBkYXRlZHx8MCkgKyAnIHVwZGF0ZWQpJywgJ3N1Y2Nlc3MnKTsgZmV0Y2hTdGF0dXMoKTsgfQogICAgfSwgZnVuY3Rpb24oZXJyKSB7IHRvYXN0KCdTeW5jIGZhaWxlZDogJyArIGVyciwgJ2Vycm9yJyk7IH0sCiAgICBmdW5jdGlvbigpIHsgYnRuLmRpc2FibGVkID0gZmFsc2U7IGJ0bi5pbm5lckhUTUwgPSAnJiMxMTAxNDsmIzY1MDM5OyBTeW5jIEFsbCB0byBHaXRIdWInOyB9KTsKICB9CgogIGZ1bmN0aW9uIHNob3dQdXNoKGlkLCBuYW1lKSB7CiAgICBwdXNoV29ya2Zsb3dJZCA9IGlkOwogICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3B1c2gtd2YtbmFtZScpLnZhbHVlID0gbmFtZTsKICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdwdXNoLWNvbW1pdC1tc2cnKS52YWx1ZSA9ICdVcGRhdGU6ICcgKyBuYW1lOwogICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3B1c2gtbW9kYWwnKS5jbGFzc0xpc3QuYWRkKCdhY3RpdmUnKTsKICAgIHNldFRpbWVvdXQoZnVuY3Rpb24oKSB7IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdwdXNoLWNvbW1pdC1tc2cnKS5mb2N1cygpOyB9LCAxMDApOwogIH0KCiAgZnVuY3Rpb24gY29uZmlybVB1c2goKSB7CiAgICB2YXIgbXNnID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3B1c2gtY29tbWl0LW1zZycpLnZhbHVlOwogICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3B1c2gtbW9kYWwnKS5jbGFzc0xpc3QucmVtb3ZlKCdhY3RpdmUnKTsKICAgIHRvYXN0KCdQdXNoaW5nLi4uJywgJ2luZm8nKTsKICAgIGFwaVBvc3QoJy9hcGkvc3luYy1zaW5nbGUnLCB7IHdvcmtmbG93X2lkOiBwdXNoV29ya2Zsb3dJZCwgY29tbWl0X21lc3NhZ2U6IG1zZyB9LCBmdW5jdGlvbihkKSB7CiAgICAgIGlmIChkLmVycm9yKSB0b2FzdChkLmVycm9yLCAnZXJyb3InKTsKICAgICAgZWxzZSB7IHRvYXN0KGQubWVzc2FnZSB8fCAnUHVzaGVkIScsICdzdWNjZXNzJyk7IGZldGNoU3RhdHVzKCk7IH0KICAgIH0sIGZ1bmN0aW9uKGVycikgeyB0b2FzdCgnUHVzaCBmYWlsZWQ6ICcgKyBlcnIsICdlcnJvcicpOyB9KTsKICB9CgogIGZ1bmN0aW9uIHNob3dIaXN0KHBhdGgsIG5hbWUpIHsKICAgIHZhciBlbCA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdoaXN0b3J5LWNvbnRlbnQnKTsKICAgIGVsLmlubmVySFRNTCA9ICc8ZGl2IGNsYXNzPSJsb2FkaW5nIj48c3BhbiBjbGFzcz0ic3Bpbm5lciI+PC9zcGFuPiBMb2FkaW5nLi4uPC9kaXY+JzsKICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdoaXN0b3J5LW1vZGFsJykuY2xhc3NMaXN0LmFkZCgnYWN0aXZlJyk7CiAgICBhcGlQb3N0KCcvYXBpL2hpc3RvcnknLCB7IGdpdGh1Yl9wYXRoOiBwYXRoIH0sIGZ1bmN0aW9uKGQpIHsKICAgICAgdmFyIGNvbW1pdHMgPSBkLmNvbW1pdHMgfHwgW107CiAgICAgIGlmICghY29tbWl0cy5sZW5ndGgpIHsgZWwuaW5uZXJIVE1MID0gJzxkaXYgY2xhc3M9ImVtcHR5Ij5ObyBjb21taXRzIGZvdW5kPC9kaXY+JzsgcmV0dXJuOyB9CiAgICAgIHZhciBoID0gJzx1bCBjbGFzcz0iY29tbWl0LWxpc3QiPic7CiAgICAgIGZvciAodmFyIGkgPSAwOyBpIDwgY29tbWl0cy5sZW5ndGg7IGkrKykgewogICAgICAgIHZhciBjID0gY29tbWl0c1tpXTsKICAgICAgICBoICs9ICc8bGkgY2xhc3M9ImNvbW1pdC1pdGVtIj48ZGl2IGNsYXNzPSJjb21taXQtaW5mbyI+PGRpdiBjbGFzcz0iY29tbWl0LXNoYSI+JyArIGVzYyhjLnNoYS5zdWJzdHJpbmcoMCw3KSkgKyAnPC9kaXY+PGRpdiBjbGFzcz0iY29tbWl0LW1zZyI+JyArIGVzYyhjLm1lc3NhZ2UpICsgJzwvZGl2PjxkaXYgY2xhc3M9ImNvbW1pdC1tZXRhIj4nICsgZXNjKGMuYXV0aG9yKSArICcgwrcgJyArIG5ldyBEYXRlKGMuZGF0ZSkudG9Mb2NhbGVTdHJpbmcoKSArICc8L2Rpdj48L2Rpdj48YnV0dG9uIGNsYXNzPSJidG4gYnRuLXNtIiBkYXRhLWFjdGlvbj0icmVzdG9yZS1jb21taXQiIGRhdGEtcGF0aD0iJyArIGF0dHIocGF0aCkgKyAnIiBkYXRhLXNoYT0iJyArIGF0dHIoYy5zaGEpICsgJyI+UmVzdG9yZTwvYnV0dG9uPjwvbGk+JzsKICAgICAgfQogICAgICBlbC5pbm5lckhUTUwgPSBoICsgJzwvdWw+JzsKICAgIH0sIGZ1bmN0aW9uKGVycikgeyBlbC5pbm5lckhUTUwgPSAnPGRpdiBjbGFzcz0iZW1wdHkiPkVycm9yOiAnICsgZXNjKGVycikgKyAnPC9kaXY+JzsgfSk7CiAgfQoKICBmdW5jdGlvbiBzaG93UmVzdG9yZShwYXRoLCBuYW1lLCBleGlzdGluZ0lkKSB7CiAgICB2YXIgbW9kYWwgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgncmVzdG9yZS1tb2RhbCcpOwogICAgbW9kYWwuc2V0QXR0cmlidXRlKCdkYXRhLXBhdGgnLCBwYXRoKTsKICAgIG1vZGFsLnNldEF0dHJpYnV0ZSgnZGF0YS1leGlzdGluZy1pZCcsIGV4aXN0aW5nSWQgfHwgJycpOwogICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3Jlc3RvcmUtd2YtbmFtZScpLnZhbHVlID0gbmFtZSB8fCBwYXRoLnNwbGl0KCcvJykucG9wKCkucmVwbGFjZSgnLmpzb24nLCcnKTsKICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdyZXN0b3JlLXRhcmdldC1pZCcpLnZhbHVlID0gZXhpc3RpbmdJZCB8fCAnJzsKICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdyZXN0b3JlLXRhcmdldC1ncm91cCcpLnN0eWxlLmRpc3BsYXkgPSAnbm9uZSc7CiAgICB2YXIgcmFkaW9zID0gZG9jdW1lbnQucXVlcnlTZWxlY3RvckFsbCgnaW5wdXRbbmFtZT0icmVzdG9yZS1tb2RlIl0nKTsKICAgIGZvciAodmFyIGkgPSAwOyBpIDwgcmFkaW9zLmxlbmd0aDsgaSsrKSByYWRpb3NbaV0uY2hlY2tlZCA9IHJhZGlvc1tpXS52YWx1ZSA9PT0gJ25ldyc7CiAgICB2YXIgc2VsID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3Jlc3RvcmUtY29tbWl0Jyk7CiAgICBzZWwuaW5uZXJIVE1MID0gJzxvcHRpb24gdmFsdWU9IiI+TGF0ZXN0IHZlcnNpb248L29wdGlvbj4nOwogICAgaWYgKHBhdGgpIGFwaVBvc3QoJy9hcGkvaGlzdG9yeScsIHsgZ2l0aHViX3BhdGg6IHBhdGggfSwgZnVuY3Rpb24oZCkgewogICAgICB2YXIgY29tbWl0cyA9IGQuY29tbWl0cyB8fCBbXTsKICAgICAgZm9yICh2YXIgaSA9IDA7IGkgPCBjb21taXRzLmxlbmd0aDsgaSsrKSB7IHZhciBvID0gZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgnb3B0aW9uJyk7IG8udmFsdWUgPSBjb21taXRzW2ldLnNoYTsgby50ZXh0Q29udGVudCA9IGNvbW1pdHNbaV0uc2hhLnN1YnN0cmluZygwLDcpICsgJyAtICcgKyBjb21taXRzW2ldLm1lc3NhZ2U7IHNlbC5hcHBlbmRDaGlsZChvKTsgfQogICAgfSk7CiAgICBtb2RhbC5jbGFzc0xpc3QuYWRkKCdhY3RpdmUnKTsKICB9CgogIGZ1bmN0aW9uIGNvbmZpcm1SZXN0b3JlKCkgewogICAgdmFyIG1vZGFsID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3Jlc3RvcmUtbW9kYWwnKTsKICAgIHZhciBwYXRoID0gbW9kYWwuZ2V0QXR0cmlidXRlKCdkYXRhLXBhdGgnKTsKICAgIHZhciBleGlzdGluZ0lkID0gbW9kYWwuZ2V0QXR0cmlidXRlKCdkYXRhLWV4aXN0aW5nLWlkJyk7CiAgICB2YXIgbW9kZUVsID0gZG9jdW1lbnQucXVlcnlTZWxlY3RvcignaW5wdXRbbmFtZT0icmVzdG9yZS1tb2RlIl06Y2hlY2tlZCcpOwogICAgdmFyIG1vZGUgPSBtb2RlRWwgPyBtb2RlRWwudmFsdWUgOiAnbmV3JzsKICAgIHZhciB0YXJnZXRJZCA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdyZXN0b3JlLXRhcmdldC1pZCcpLnZhbHVlIHx8IGV4aXN0aW5nSWQ7CiAgICB2YXIgc2hhID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3Jlc3RvcmUtY29tbWl0JykudmFsdWU7CiAgICBtb2RhbC5jbGFzc0xpc3QucmVtb3ZlKCdhY3RpdmUnKTsKICAgIHRvYXN0KCdSZXN0b3JpbmcuLi4nLCAnaW5mbycpOwogICAgdmFyIGJvZHkgPSB7IGdpdGh1Yl9wYXRoOiBwYXRoLCBtb2RlOiBtb2RlIH07CiAgICBpZiAoc2hhKSBib2R5LmNvbW1pdF9zaGEgPSBzaGE7CiAgICBpZiAobW9kZSA9PT0gJ3JlcGxhY2UnICYmIHRhcmdldElkKSBib2R5LnRhcmdldF93b3JrZmxvd19pZCA9IHRhcmdldElkOwogICAgYXBpUG9zdCgnL2FwaS9yZXN0b3JlJywgYm9keSwgZnVuY3Rpb24oZCkgewogICAgICBpZiAoZC5lcnJvcikgdG9hc3QoZC5lcnJvciwgJ2Vycm9yJyk7CiAgICAgIGVsc2UgeyB0b2FzdChkLm1lc3NhZ2UgfHwgJ1Jlc3RvcmVkIScsICdzdWNjZXNzJyk7IGZldGNoU3RhdHVzKCk7IH0KICAgIH0sIGZ1bmN0aW9uKGVycikgeyB0b2FzdCgnUmVzdG9yZSBmYWlsZWQ6ICcgKyBlcnIsICdlcnJvcicpOyB9KTsKICB9CgogIGZ1bmN0aW9uIHJlbmRlclN0YXRzKCkgewogICAgdmFyIHMgPSAwLCBuID0gMCwgZyA9IDA7CiAgICBmb3IgKHZhciBpID0gMDsgaSA8IHdvcmtmbG93cy5sZW5ndGg7IGkrKykgeyBpZiAod29ya2Zsb3dzW2ldLnN0YXR1cyA9PT0gJ3N5bmNlZCcpIHMrKzsgZWxzZSBpZiAod29ya2Zsb3dzW2ldLnN0YXR1cyA9PT0gJ244bi1vbmx5JykgbisrOyBlbHNlIGlmICh3b3JrZmxvd3NbaV0uc3RhdHVzID09PSAnZ2l0LW9ubHknKSBnKys7IH0KICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdzdGF0LXRvdGFsJykudGV4dENvbnRlbnQgPSB3b3JrZmxvd3MubGVuZ3RoOwogICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3N0YXQtc3luY2VkJykudGV4dENvbnRlbnQgPSBzOwogICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3N0YXQtbjhuJykudGV4dENvbnRlbnQgPSBuOwogICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3N0YXQtZ2l0JykudGV4dENvbnRlbnQgPSBnOwogIH0KCiAgZnVuY3Rpb24gcmVuZGVyVGFibGUoKSB7CiAgICB2YXIgdGJvZHkgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnd29ya2Zsb3ctdGFibGUnKTsKICAgIHZhciBmID0gW107CiAgICBmb3IgKHZhciBpID0gMDsgaSA8IHdvcmtmbG93cy5sZW5ndGg7IGkrKykgeyBpZiAoY3VycmVudEZpbHRlciA9PT0gJ2FsbCcgfHwgd29ya2Zsb3dzW2ldLnN0YXR1cyA9PT0gY3VycmVudEZpbHRlcikgZi5wdXNoKHdvcmtmbG93c1tpXSk7IH0KICAgIGlmICghZi5sZW5ndGgpIHsgdGJvZHkuaW5uZXJIVE1MID0gJzx0cj48dGQgY29sc3Bhbj0iNiIgY2xhc3M9ImVtcHR5Ij5ObyB3b3JrZmxvd3MgbWF0Y2g8L3RkPjwvdHI+JzsgcmV0dXJuOyB9CiAgICB2YXIgcm93cyA9ICcnOwogICAgZm9yICh2YXIgaSA9IDA7IGkgPCBmLmxlbmd0aDsgaSsrKSB7CiAgICAgIHZhciB3ID0gZltpXTsKICAgICAgdmFyIGJhZGdlID0gJzxzcGFuIGNsYXNzPSJiYWRnZSBiYWRnZS0nICsgdy5zdGF0dXMgKyAnIj4nICsgdy5zdGF0dXMucmVwbGFjZSgnLScsJyAnKSArICc8L3NwYW4+JzsKICAgICAgdmFyIGFjdGl2ZSA9IHcuYWN0aXZlID8gJ+KchScgOiAn4o+477iPJzsKICAgICAgdmFyIG1vZCA9IHcudXBkYXRlZEF0ID8gbmV3IERhdGUody51cGRhdGVkQXQpLnRvTG9jYWxlU3RyaW5nKCkgOiAn4oCUJzsKICAgICAgdmFyIGFjdHMgPSAnPGRpdiBjbGFzcz0iYWN0aW9ucy1jZWxsIj4nOwogICAgICBpZiAody5zdGF0dXMgIT09ICdnaXQtb25seScpIGFjdHMgKz0gJzxidXR0b24gY2xhc3M9ImJ0biBidG4tc20iIGRhdGEtYWN0aW9uPSJwdXNoIiBkYXRhLWlkPSInICsgYXR0cih3LmlkKSArICciIGRhdGEtbmFtZT0iJyArIGF0dHIody5uYW1lKSArICciIHRpdGxlPSJQdXNoIj7irIbvuI88L2J1dHRvbj4nOwogICAgICBpZiAody5naXRodWJfcGF0aCkgewogICAgICAgIGFjdHMgKz0gJzxidXR0b24gY2xhc3M9ImJ0biBidG4tc20iIGRhdGEtYWN0aW9uPSJoaXN0b3J5IiBkYXRhLXBhdGg9IicgKyBhdHRyKHcuZ2l0aHViX3BhdGgpICsgJyIgZGF0YS1uYW1lPSInICsgYXR0cih3Lm5hbWUpICsgJyIgdGl0bGU9Ikhpc3RvcnkiPvCfk5w8L2J1dHRvbj4nOwogICAgICAgIGlmICh3LmdpdGh1Yl91cmwpIGFjdHMgKz0gJzxhIGNsYXNzPSJidG4gYnRuLXNtIiBocmVmPSInICsgYXR0cih3LmdpdGh1Yl91cmwpICsgJyIgdGFyZ2V0PSJfYmxhbmsiIHRpdGxlPSJHaXRIdWIiPvCflJc8L2E+JzsKICAgICAgfQogICAgICBpZiAody5zdGF0dXMgPT09ICdnaXQtb25seScgfHwgdy5naXRodWJfcGF0aCkgYWN0cyArPSAnPGJ1dHRvbiBjbGFzcz0iYnRuIGJ0bi1zbSIgZGF0YS1hY3Rpb249InJlc3RvcmUiIGRhdGEtcGF0aD0iJyArIGF0dHIody5naXRodWJfcGF0aHx8JycpICsgJyIgZGF0YS1uYW1lPSInICsgYXR0cih3Lm5hbWUpICsgJyIgZGF0YS1pZD0iJyArIGF0dHIody5pZHx8JycpICsgJyIgdGl0bGU9IlJlc3RvcmUiPuKsh++4jzwvYnV0dG9uPic7CiAgICAgIGFjdHMgKz0gJzwvZGl2Pic7CiAgICAgIHJvd3MgKz0gJzx0cj48dGQ+PHN0cm9uZz4nICsgZXNjKHcubmFtZSkgKyAnPC9zdHJvbmc+PC90ZD48dGQ+PGNvZGU+JyArICh3LmlkfHwn4oCUJykgKyAnPC9jb2RlPjwvdGQ+PHRkPicgKyBiYWRnZSArICc8L3RkPjx0ZCBzdHlsZT0idGV4dC1hbGlnbjpjZW50ZXIiPicgKyBhY3RpdmUgKyAnPC90ZD48dGQ+JyArIG1vZCArICc8L3RkPjx0ZD4nICsgYWN0cyArICc8L3RkPjwvdHI+JzsKICAgIH0KICAgIHRib2R5LmlubmVySFRNTCA9IHJvd3M7CiAgfQoKICBmdW5jdGlvbiB0b2FzdChtc2csIHR5cGUpIHsgdmFyIGMgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgndG9hc3QtY29udGFpbmVyJyk7IHZhciB0ID0gZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgnZGl2Jyk7IHQuY2xhc3NOYW1lID0gJ3RvYXN0IHRvYXN0LScgKyB0eXBlOyB0LnRleHRDb250ZW50ID0gbXNnOyBjLmFwcGVuZENoaWxkKHQpOyBzZXRUaW1lb3V0KGZ1bmN0aW9uKCkgeyBpZiAodC5wYXJlbnROb2RlKSB0LnJlbW92ZSgpOyB9LCA0MDAwKTsgfQogIGZ1bmN0aW9uIGVzYyhzKSB7IHJldHVybiBzID8gU3RyaW5nKHMpLnJlcGxhY2UoLyYvZywnJmFtcDsnKS5yZXBsYWNlKC88L2csJyZsdDsnKS5yZXBsYWNlKC8+L2csJyZndDsnKSA6ICcnOyB9CiAgZnVuY3Rpb24gYXR0cihzKSB7IHJldHVybiBzID8gU3RyaW5nKHMpLnJlcGxhY2UoLyYvZywnJmFtcDsnKS5yZXBsYWNlKC8iL2csJyZxdW90OycpLnJlcGxhY2UoLycvZywnJiMzOTsnKS5yZXBsYWNlKC88L2csJyZsdDsnKS5yZXBsYWNlKC8+L2csJyZndDsnKSA6ICcnOyB9CgogIGZ1bmN0aW9uIGFwaUdldChwYXRoLCBvaywgZXJyKSB7CiAgICB2YXIgeCA9IG5ldyBYTUxIdHRwUmVxdWVzdCgpOwogICAgeC5vcGVuKCdHRVQnLCBBUElfQkFTRSArIHBhdGgsIHRydWUpOwogICAgeC5vbmxvYWQgPSBmdW5jdGlvbigpIHsgdHJ5IHsgb2soSlNPTi5wYXJzZSh4LnJlc3BvbnNlVGV4dCkpOyB9IGNhdGNoKGUpIHsgaWYgKGVycikgZXJyKGUubWVzc2FnZSk7IH0gfTsKICAgIHgub25lcnJvciA9IGZ1bmN0aW9uKCkgeyBpZiAoZXJyKSBlcnIoJ05ldHdvcmsgZXJyb3InKTsgfTsKICAgIHguc2VuZCgpOwogIH0KICBmdW5jdGlvbiBhcGlQb3N0KHBhdGgsIGJvZHksIG9rLCBlcnIsIGRvbmUpIHsKICAgIHZhciB4ID0gbmV3IFhNTEh0dHBSZXF1ZXN0KCk7CiAgICB4Lm9wZW4oJ1BPU1QnLCBBUElfQkFTRSArIHBhdGgsIHRydWUpOwogICAgeC5zZXRSZXF1ZXN0SGVhZGVyKCdDb250ZW50LVR5cGUnLCAnYXBwbGljYXRpb24vanNvbicpOwogICAgeC5vbmxvYWQgPSBmdW5jdGlvbigpIHsgdHJ5IHsgb2soSlNPTi5wYXJzZSh4LnJlc3BvbnNlVGV4dCkpOyB9IGNhdGNoKGUpIHsgaWYgKGVycikgZXJyKGUubWVzc2FnZSk7IH0gaWYgKGRvbmUpIGRvbmUoKTsgfTsKICAgIHgub25lcnJvciA9IGZ1bmN0aW9uKCkgeyBpZiAoZXJyKSBlcnIoJ05ldHdvcmsgZXJyb3InKTsgaWYgKGRvbmUpIGRvbmUoKTsgfTsKICAgIHguc2VuZChKU09OLnN0cmluZ2lmeShib2R5KSk7CiAgfQp9KSgpOwo8L3NjcmlwdD4KPC9ib2R5Pgo8L2h0bWw+', 'base64').toString('utf8');\nhtml = html.split('__API_BASE__').join(apiBase);\n\nreturn [{ json: { html: html } }];",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "a0b1c2d3-e4f5-6789-abcd-000600000000",
+      "name": "Generate Dashboard",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.html }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "id": "a0b1c2d3-e4f5-6789-abcd-000700000000",
+      "name": "Send Dashboard",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "path": "github-sync/api/status",
+        "httpMethod": "GET",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a0b1c2d3-e4f5-6789-abcd-000800000000",
+      "name": "Status Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        80,
+        360
+      ],
+      "webhookId": "a0b1c2d3-e4f5-6789-abcd-000900000000"
+    },
+    {
+      "parameters": {
+        "jsCode": "var CONFIG = $getWorkflowStaticData('global');\nif (!CONFIG.github_token || CONFIG.github_token === 'ghp_YOUR_GITHUB_TOKEN') {\n  throw new Error('Config not set! Run the manual trigger on the Save Config node first.');\n}\nvar SELF_ID = $workflow.id;\n\nfunction sanitizeName(name) {\n  return name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();\n}\n\nasync function ghRequest(path, method, body) {\n  var url = path.startsWith('http') ? path : 'https://api.github.com' + path;\n  var opts = {\n    url: url,\n    method: method || 'GET',\n    headers: {\n      'Authorization': 'Bearer ' + CONFIG.github_token,\n      'Accept': 'application/vnd.github.v3+json',\n      'User-Agent': 'n8n-github-sync'\n    },\n    returnFullResponse: true,\n    ignoreHttpStatusErrors: true\n  };\n  if (body) {\n    opts.body = body;\n    opts.headers['Content-Type'] = 'application/json';\n  }\n  var res = await helpers.httpRequest(opts);\n  var data = typeof res.body === 'string' ? JSON.parse(res.body) : res.body;\n  return { ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, data: data };\n}\n\nasync function n8nRequest(path, method, body) {\n  var opts = {\n    url: CONFIG.n8n_base_url + path,\n    method: method || 'GET',\n    headers: {\n      'X-N8N-API-KEY': CONFIG.n8n_api_key,\n      'Content-Type': 'application/json'\n    },\n    returnFullResponse: true,\n    ignoreHttpStatusErrors: true\n  };\n  if (body) opts.body = body;\n  var res = await helpers.httpRequest(opts);\n  var data = typeof res.body === 'string' ? JSON.parse(res.body) : res.body;\n  return { ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, data: data };\n}\n\nvar n8nRes = await n8nRequest('/api/v1/workflows');\nvar n8nWorkflows = (n8nRes.data.data || n8nRes.data).filter(function(w) { return w.id !== SELF_ID; });\n\nvar ghFiles = [];\ntry {\n  var ghRes = await ghRequest('/repos/' + CONFIG.github_owner + '/' + CONFIG.github_repo + '/contents/' + CONFIG.base_path + '?ref=' + CONFIG.github_branch);\n  if (ghRes.ok && Array.isArray(ghRes.data)) ghFiles = ghRes.data;\n} catch (e) {}\n\nvar ghMap = {};\nfor (var i = 0; i < ghFiles.length; i++) {\n  var match = ghFiles[i].name.match(/^([^_]+)_/);\n  if (match) ghMap[match[1]] = { path: ghFiles[i].path, sha: ghFiles[i].sha, name: ghFiles[i].name };\n}\n\nvar workflows = [];\nvar n8nIds = {};\n\nfor (var i = 0; i < n8nWorkflows.length; i++) {\n  var wf = n8nWorkflows[i];\n  n8nIds[wf.id] = true;\n  var gh = ghMap[wf.id];\n  workflows.push({\n    id: wf.id, name: wf.name,\n    status: gh ? 'synced' : 'n8n-only',\n    active: wf.active || false,\n    github_path: gh ? gh.path : null,\n    github_url: gh ? 'https://github.com/' + CONFIG.github_owner + '/' + CONFIG.github_repo + '/blob/' + CONFIG.github_branch + '/' + gh.path : null,\n    last_synced: null, updatedAt: wf.updatedAt\n  });\n}\n\nvar ghKeys = Object.keys(ghMap);\nfor (var i = 0; i < ghKeys.length; i++) {\n  if (!n8nIds[ghKeys[i]]) {\n    var g = ghMap[ghKeys[i]];\n    workflows.push({\n      id: null, name: g.name.replace(/^[^_]+_/, '').replace(/\\.json$/, '').replace(/_/g, ' '),\n      status: 'git-only', active: false,\n      github_path: g.path,\n      github_url: 'https://github.com/' + CONFIG.github_owner + '/' + CONFIG.github_repo + '/blob/' + CONFIG.github_branch + '/' + g.path,\n      last_synced: null, updatedAt: null\n    });\n  }\n}\n\nvar order = { 'n8n-only': 0, 'synced': 1, 'git-only': 2 };\nworkflows.sort(function(a, b) { return (order[a.status] || 9) - (order[b.status] || 9); });\n\nreturn [{ json: { workflows: workflows } }];",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "a0b1c2d3-e4f5-6789-abcd-000a00000000",
+      "name": "Get Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "firstIncomingItem",
+        "options": {}
+      },
+      "id": "a0b1c2d3-e4f5-6789-abcd-000b00000000",
+      "name": "Send Status",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "path": "github-sync/api/sync-all",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a0b1c2d3-e4f5-6789-abcd-000c00000000",
+      "name": "Sync All Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        80,
+        560
+      ],
+      "webhookId": "a0b1c2d3-e4f5-6789-abcd-000d00000000"
+    },
+    {
+      "parameters": {
+        "jsCode": "var CONFIG = $getWorkflowStaticData('global');\nif (!CONFIG.github_token || CONFIG.github_token === 'ghp_YOUR_GITHUB_TOKEN') {\n  throw new Error('Config not set! Run the manual trigger on the Save Config node first.');\n}\nvar SELF_ID = $workflow.id;\n\nfunction sanitizeName(name) {\n  return name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();\n}\n\nasync function ghRequest(path, method, body) {\n  var url = path.startsWith('http') ? path : 'https://api.github.com' + path;\n  var opts = {\n    url: url,\n    method: method || 'GET',\n    headers: {\n      'Authorization': 'Bearer ' + CONFIG.github_token,\n      'Accept': 'application/vnd.github.v3+json',\n      'User-Agent': 'n8n-github-sync'\n    },\n    returnFullResponse: true,\n    ignoreHttpStatusErrors: true\n  };\n  if (body) {\n    opts.body = body;\n    opts.headers['Content-Type'] = 'application/json';\n  }\n  var res = await helpers.httpRequest(opts);\n  var data = typeof res.body === 'string' ? JSON.parse(res.body) : res.body;\n  return { ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, data: data };\n}\n\nasync function n8nRequest(path, method, body) {\n  var opts = {\n    url: CONFIG.n8n_base_url + path,\n    method: method || 'GET',\n    headers: {\n      'X-N8N-API-KEY': CONFIG.n8n_api_key,\n      'Content-Type': 'application/json'\n    },\n    returnFullResponse: true,\n    ignoreHttpStatusErrors: true\n  };\n  if (body) opts.body = body;\n  var res = await helpers.httpRequest(opts);\n  var data = typeof res.body === 'string' ? JSON.parse(res.body) : res.body;\n  return { ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, data: data };\n}\n\nvar body = $input.first().json.body || {};\nvar customMsg = body.commit_message || null;\n\nvar n8nRes = await n8nRequest('/api/v1/workflows');\nvar allWorkflows = (n8nRes.data.data || n8nRes.data).filter(function(w) { return w.id !== SELF_ID; });\n\nvar ghMap = {};\ntry {\n  var ghRes = await ghRequest('/repos/' + CONFIG.github_owner + '/' + CONFIG.github_repo + '/contents/' + CONFIG.base_path + '?ref=' + CONFIG.github_branch);\n  if (ghRes.ok && Array.isArray(ghRes.data)) {\n    for (var i = 0; i < ghRes.data.length; i++) {\n      var m = ghRes.data[i].name.match(/^([^_]+)_/);\n      if (m) ghMap[m[1]] = ghRes.data[i].sha;\n    }\n  }\n} catch (e) {}\n\nvar created = 0, updated = 0, errors = [];\n\nfor (var i = 0; i < allWorkflows.length; i++) {\n  var wf = allWorkflows[i];\n  try {\n    var fullRes = await n8nRequest('/api/v1/workflows/' + wf.id);\n    var fullWf = fullRes.data;\n    var fileName = wf.id + '_' + sanitizeName(wf.name) + '.json';\n    var filePath = CONFIG.base_path + '/' + fileName;\n    var content = Buffer.from(JSON.stringify(fullWf, null, 2)).toString('base64');\n    var existingSha = ghMap[wf.id];\n\n    var putBody = { message: customMsg || 'Sync: ' + wf.name, content: content, branch: CONFIG.github_branch };\n    if (existingSha) putBody.sha = existingSha;\n\n    var putRes = await ghRequest('/repos/' + CONFIG.github_owner + '/' + CONFIG.github_repo + '/contents/' + filePath, 'PUT', JSON.stringify(putBody));\n    if (putRes.ok) { if (existingSha) updated++; else created++; }\n    else { errors.push({ id: wf.id, name: wf.name, error: (putRes.data && putRes.data.message) || 'HTTP ' + putRes.status }); }\n  } catch (e) { errors.push({ id: wf.id, name: wf.name, error: e.message }); }\n}\n\nreturn [{ json: { synced: created + updated, created: created, updated: updated, errors: errors } }];",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "a0b1c2d3-e4f5-6789-abcd-000e00000000",
+      "name": "Sync All Workflows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "firstIncomingItem",
+        "options": {}
+      },
+      "id": "a0b1c2d3-e4f5-6789-abcd-000f00000000",
+      "name": "Send Sync Result",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "path": "github-sync/api/sync-single",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a0b1c2d3-e4f5-6789-abcd-001000000000",
+      "name": "Sync Single Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        80,
+        760
+      ],
+      "webhookId": "a0b1c2d3-e4f5-6789-abcd-001100000000"
+    },
+    {
+      "parameters": {
+        "jsCode": "var CONFIG = $getWorkflowStaticData('global');\nif (!CONFIG.github_token || CONFIG.github_token === 'ghp_YOUR_GITHUB_TOKEN') {\n  throw new Error('Config not set! Run the manual trigger on the Save Config node first.');\n}\nvar SELF_ID = $workflow.id;\n\nfunction sanitizeName(name) {\n  return name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();\n}\n\nasync function ghRequest(path, method, body) {\n  var url = path.startsWith('http') ? path : 'https://api.github.com' + path;\n  var opts = {\n    url: url,\n    method: method || 'GET',\n    headers: {\n      'Authorization': 'Bearer ' + CONFIG.github_token,\n      'Accept': 'application/vnd.github.v3+json',\n      'User-Agent': 'n8n-github-sync'\n    },\n    returnFullResponse: true,\n    ignoreHttpStatusErrors: true\n  };\n  if (body) {\n    opts.body = body;\n    opts.headers['Content-Type'] = 'application/json';\n  }\n  var res = await helpers.httpRequest(opts);\n  var data = typeof res.body === 'string' ? JSON.parse(res.body) : res.body;\n  return { ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, data: data };\n}\n\nasync function n8nRequest(path, method, body) {\n  var opts = {\n    url: CONFIG.n8n_base_url + path,\n    method: method || 'GET',\n    headers: {\n      'X-N8N-API-KEY': CONFIG.n8n_api_key,\n      'Content-Type': 'application/json'\n    },\n    returnFullResponse: true,\n    ignoreHttpStatusErrors: true\n  };\n  if (body) opts.body = body;\n  var res = await helpers.httpRequest(opts);\n  var data = typeof res.body === 'string' ? JSON.parse(res.body) : res.body;\n  return { ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, data: data };\n}\n\nvar body = $input.first().json.body || {};\nvar workflowId = body.workflow_id;\nvar commitMsg = body.commit_message || 'Sync workflow';\n\nif (!workflowId) return [{ json: { error: 'workflow_id is required' } }];\n\nvar fullRes = await n8nRequest('/api/v1/workflows/' + workflowId);\nif (!fullRes.ok) return [{ json: { error: 'Workflow not found' } }];\n\nvar fullWf = fullRes.data;\nvar fileName = workflowId + '_' + sanitizeName(fullWf.name) + '.json';\nvar filePath = CONFIG.base_path + '/' + fileName;\nvar content = Buffer.from(JSON.stringify(fullWf, null, 2)).toString('base64');\n\nvar existingSha = null;\ntry {\n  var checkRes = await ghRequest('/repos/' + CONFIG.github_owner + '/' + CONFIG.github_repo + '/contents/' + filePath + '?ref=' + CONFIG.github_branch);\n  if (checkRes.ok) existingSha = checkRes.data.sha;\n} catch (e) {}\n\nvar putBody = { message: commitMsg, content: content, branch: CONFIG.github_branch };\nif (existingSha) putBody.sha = existingSha;\n\nvar putRes = await ghRequest('/repos/' + CONFIG.github_owner + '/' + CONFIG.github_repo + '/contents/' + filePath, 'PUT', JSON.stringify(putBody));\nif (!putRes.ok) return [{ json: { error: (putRes.data && putRes.data.message) || 'Push failed' } }];\n\nreturn [{ json: { message: 'Synced successfully (' + (existingSha ? 'updated' : 'created') + ')', action: existingSha ? 'updated' : 'created' } }];",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "a0b1c2d3-e4f5-6789-abcd-001200000000",
+      "name": "Sync Single Workflow",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        760
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "firstIncomingItem",
+        "options": {}
+      },
+      "id": "a0b1c2d3-e4f5-6789-abcd-001300000000",
+      "name": "Send Single Result",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        760
+      ]
+    },
+    {
+      "parameters": {
+        "path": "github-sync/api/history",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a0b1c2d3-e4f5-6789-abcd-001400000000",
+      "name": "History Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        80,
+        960
+      ],
+      "webhookId": "a0b1c2d3-e4f5-6789-abcd-001500000000"
+    },
+    {
+      "parameters": {
+        "jsCode": "var CONFIG = $getWorkflowStaticData('global');\nif (!CONFIG.github_token || CONFIG.github_token === 'ghp_YOUR_GITHUB_TOKEN') {\n  throw new Error('Config not set! Run the manual trigger on the Save Config node first.');\n}\nvar SELF_ID = $workflow.id;\n\nfunction sanitizeName(name) {\n  return name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();\n}\n\nasync function ghRequest(path, method, body) {\n  var url = path.startsWith('http') ? path : 'https://api.github.com' + path;\n  var opts = {\n    url: url,\n    method: method || 'GET',\n    headers: {\n      'Authorization': 'Bearer ' + CONFIG.github_token,\n      'Accept': 'application/vnd.github.v3+json',\n      'User-Agent': 'n8n-github-sync'\n    },\n    returnFullResponse: true,\n    ignoreHttpStatusErrors: true\n  };\n  if (body) {\n    opts.body = body;\n    opts.headers['Content-Type'] = 'application/json';\n  }\n  var res = await helpers.httpRequest(opts);\n  var data = typeof res.body === 'string' ? JSON.parse(res.body) : res.body;\n  return { ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, data: data };\n}\n\nasync function n8nRequest(path, method, body) {\n  var opts = {\n    url: CONFIG.n8n_base_url + path,\n    method: method || 'GET',\n    headers: {\n      'X-N8N-API-KEY': CONFIG.n8n_api_key,\n      'Content-Type': 'application/json'\n    },\n    returnFullResponse: true,\n    ignoreHttpStatusErrors: true\n  };\n  if (body) opts.body = body;\n  var res = await helpers.httpRequest(opts);\n  var data = typeof res.body === 'string' ? JSON.parse(res.body) : res.body;\n  return { ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, data: data };\n}\n\nvar body = $input.first().json.body || {};\nvar githubPath = body.github_path;\nif (!githubPath) return [{ json: { error: 'github_path is required', commits: [] } }];\n\nvar res = await ghRequest('/repos/' + CONFIG.github_owner + '/' + CONFIG.github_repo + '/commits?path=' + encodeURIComponent(githubPath) + '&sha=' + CONFIG.github_branch);\nif (!res.ok) return [{ json: { error: 'Failed to fetch history', commits: [] } }];\n\nvar commits = [];\nfor (var i = 0; i < res.data.length; i++) {\n  var c = res.data[i];\n  commits.push({\n    sha: c.sha, message: c.commit.message, date: c.commit.author.date,\n    author: c.commit.author.name || (c.author && c.author.login) || 'unknown'\n  });\n}\nreturn [{ json: { commits: commits } }];",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "a0b1c2d3-e4f5-6789-abcd-001600000000",
+      "name": "Get History",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        960
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "firstIncomingItem",
+        "options": {}
+      },
+      "id": "a0b1c2d3-e4f5-6789-abcd-001700000000",
+      "name": "Send History",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        960
+      ]
+    },
+    {
+      "parameters": {
+        "path": "github-sync/api/restore",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a0b1c2d3-e4f5-6789-abcd-001800000000",
+      "name": "Restore Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        80,
+        1160
+      ],
+      "webhookId": "a0b1c2d3-e4f5-6789-abcd-001900000000"
+    },
+    {
+      "parameters": {
+        "jsCode": "var CONFIG = $getWorkflowStaticData('global');\nif (!CONFIG.github_token || CONFIG.github_token === 'ghp_YOUR_GITHUB_TOKEN') {\n  throw new Error('Config not set! Run the manual trigger on the Save Config node first.');\n}\nvar SELF_ID = $workflow.id;\n\nfunction sanitizeName(name) {\n  return name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();\n}\n\nasync function ghRequest(path, method, body) {\n  var url = path.startsWith('http') ? path : 'https://api.github.com' + path;\n  var opts = {\n    url: url,\n    method: method || 'GET',\n    headers: {\n      'Authorization': 'Bearer ' + CONFIG.github_token,\n      'Accept': 'application/vnd.github.v3+json',\n      'User-Agent': 'n8n-github-sync'\n    },\n    returnFullResponse: true,\n    ignoreHttpStatusErrors: true\n  };\n  if (body) {\n    opts.body = body;\n    opts.headers['Content-Type'] = 'application/json';\n  }\n  var res = await helpers.httpRequest(opts);\n  var data = typeof res.body === 'string' ? JSON.parse(res.body) : res.body;\n  return { ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, data: data };\n}\n\nasync function n8nRequest(path, method, body) {\n  var opts = {\n    url: CONFIG.n8n_base_url + path,\n    method: method || 'GET',\n    headers: {\n      'X-N8N-API-KEY': CONFIG.n8n_api_key,\n      'Content-Type': 'application/json'\n    },\n    returnFullResponse: true,\n    ignoreHttpStatusErrors: true\n  };\n  if (body) opts.body = body;\n  var res = await helpers.httpRequest(opts);\n  var data = typeof res.body === 'string' ? JSON.parse(res.body) : res.body;\n  return { ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, data: data };\n}\n\nvar body = $input.first().json.body || {};\nif (!body.github_path) return [{ json: { error: 'github_path is required' } }];\n\nvar url = '/repos/' + CONFIG.github_owner + '/' + CONFIG.github_repo + '/contents/' + body.github_path + '?ref=' + (body.commit_sha || CONFIG.github_branch);\nvar ghRes = await ghRequest(url);\nif (!ghRes.ok) return [{ json: { error: 'File not found on GitHub' } }];\n\nvar workflowJson;\ntry { workflowJson = JSON.parse(Buffer.from(ghRes.data.content, 'base64').toString('utf8')); }\ncatch (e) { return [{ json: { error: 'Invalid JSON in GitHub file' } }]; }\n\ndelete workflowJson.id;\ndelete workflowJson.createdAt;\ndelete workflowJson.updatedAt;\n\nif (body.mode === 'replace' && body.target_workflow_id) {\n  var r = await n8nRequest('/api/v1/workflows/' + body.target_workflow_id, 'PUT', JSON.stringify(workflowJson));\n  if (!r.ok) return [{ json: { error: (r.data && r.data.message) || 'Update failed' } }];\n  return [{ json: { message: 'Workflow replaced successfully', workflow_id: body.target_workflow_id } }];\n} else {\n  workflowJson.name = (workflowJson.name || 'Restored') + ' (restored)';\n  var r = await n8nRequest('/api/v1/workflows', 'POST', JSON.stringify(workflowJson));\n  if (!r.ok) return [{ json: { error: (r.data && r.data.message) || 'Create failed' } }];\n  return [{ json: { message: 'Workflow imported successfully', workflow_id: r.data.id } }];\n}",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "a0b1c2d3-e4f5-6789-abcd-001a00000000",
+      "name": "Restore Workflow",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        1160
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "firstIncomingItem",
+        "options": {}
+      },
+      "id": "a0b1c2d3-e4f5-6789-abcd-001b00000000",
+      "name": "Send Restore Result",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        1160
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24
+            }
+          ]
+        }
+      },
+      "id": "a0b1c2d3-e4f5-6789-abcd-001c00000000",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        80,
+        1400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "var CONFIG = $getWorkflowStaticData('global');\nif (!CONFIG.github_token || CONFIG.github_token === 'ghp_YOUR_GITHUB_TOKEN') {\n  throw new Error('Config not set! Run the manual trigger on the Save Config node first.');\n}\nvar SELF_ID = $workflow.id;\n\nfunction sanitizeName(name) {\n  return name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();\n}\n\nasync function ghRequest(path, method, body) {\n  var url = path.startsWith('http') ? path : 'https://api.github.com' + path;\n  var opts = {\n    url: url,\n    method: method || 'GET',\n    headers: {\n      'Authorization': 'Bearer ' + CONFIG.github_token,\n      'Accept': 'application/vnd.github.v3+json',\n      'User-Agent': 'n8n-github-sync'\n    },\n    returnFullResponse: true,\n    ignoreHttpStatusErrors: true\n  };\n  if (body) {\n    opts.body = body;\n    opts.headers['Content-Type'] = 'application/json';\n  }\n  var res = await helpers.httpRequest(opts);\n  var data = typeof res.body === 'string' ? JSON.parse(res.body) : res.body;\n  return { ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, data: data };\n}\n\nasync function n8nRequest(path, method, body) {\n  var opts = {\n    url: CONFIG.n8n_base_url + path,\n    method: method || 'GET',\n    headers: {\n      'X-N8N-API-KEY': CONFIG.n8n_api_key,\n      'Content-Type': 'application/json'\n    },\n    returnFullResponse: true,\n    ignoreHttpStatusErrors: true\n  };\n  if (body) opts.body = body;\n  var res = await helpers.httpRequest(opts);\n  var data = typeof res.body === 'string' ? JSON.parse(res.body) : res.body;\n  return { ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, data: data };\n}\n\nvar n8nRes = await n8nRequest('/api/v1/workflows');\nvar allWorkflows = (n8nRes.data.data || n8nRes.data).filter(function(w) { return w.id !== SELF_ID; });\n\n// Fetch existing GitHub files with their download URLs\nvar ghMap = {};\ntry {\n  var ghRes = await ghRequest('/repos/' + CONFIG.github_owner + '/' + CONFIG.github_repo + '/contents/' + CONFIG.base_path + '?ref=' + CONFIG.github_branch);\n  if (ghRes.ok && Array.isArray(ghRes.data)) {\n    for (var i = 0; i < ghRes.data.length; i++) {\n      var m = ghRes.data[i].name.match(/^([^_]+)_/);\n      if (m) ghMap[m[1]] = { sha: ghRes.data[i].sha, path: ghRes.data[i].path, download_url: ghRes.data[i].download_url };\n    }\n  }\n} catch (e) {}\n\nfunction describeChanges(oldWf, newWf) {\n  var changes = [];\n  var oldNodes = (oldWf.nodes || []).map(function(n) { return n.name; });\n  var newNodes = (newWf.nodes || []).map(function(n) { return n.name; });\n  var added = newNodes.filter(function(n) { return oldNodes.indexOf(n) === -1; });\n  var removed = oldNodes.filter(function(n) { return newNodes.indexOf(n) === -1; });\n  if (added.length) changes.push('Added: ' + added.join(', '));\n  if (removed.length) changes.push('Removed: ' + removed.join(', '));\n  var modified = [];\n  for (var i = 0; i < newWf.nodes.length; i++) {\n    var nn = newWf.nodes[i];\n    for (var j = 0; j < oldWf.nodes.length; j++) {\n      var on = oldWf.nodes[j];\n      if (nn.name === on.name && JSON.stringify(nn.parameters) !== JSON.stringify(on.parameters)) {\n        modified.push(nn.name);\n        break;\n      }\n    }\n  }\n  if (modified.length) changes.push('Modified: ' + modified.join(', '));\n  if (newWf.nodes.length !== oldWf.nodes.length && !added.length && !removed.length) {\n    changes.push('Node count: ' + oldWf.nodes.length + ' -> ' + newWf.nodes.length);\n  }\n  if (JSON.stringify(newWf.connections) !== JSON.stringify(oldWf.connections)) changes.push('Connections updated');\n  if ((newWf.active || false) !== (oldWf.active || false)) changes.push('Active: ' + (newWf.active ? 'on' : 'off'));\n  if (!changes.length) changes.push('Settings or metadata changed');\n  return changes.join(' | ');\n}\n\nvar created = 0, updated = 0, skipped = 0, errors = [];\nvar details = [];\n\nfor (var i = 0; i < allWorkflows.length; i++) {\n  var wf = allWorkflows[i];\n  try {\n    var fullRes = await n8nRequest('/api/v1/workflows/' + wf.id);\n    var fullWf = fullRes.data;\n    var fileName = wf.id + '_' + sanitizeName(wf.name) + '.json';\n    var filePath = CONFIG.base_path + '/' + fileName;\n    var existing = ghMap[wf.id];\n\n    // If it exists on GitHub, check if it actually changed\n    if (existing) {\n      var ghFileRes = await ghRequest('/repos/' + CONFIG.github_owner + '/' + CONFIG.github_repo + '/contents/' + existing.path + '?ref=' + CONFIG.github_branch);\n      if (ghFileRes.ok && ghFileRes.data.content) {\n        var oldWf = JSON.parse(Buffer.from(ghFileRes.data.content, 'base64').toString('utf8'));\n        // Compare updatedAt — if same, skip\n        if (oldWf.updatedAt && fullWf.updatedAt && oldWf.updatedAt === fullWf.updatedAt) {\n          skipped++;\n          continue;\n        }\n        // Build descriptive commit message\n        var desc = describeChanges(oldWf, fullWf);\n        var commitMsg = 'Update ' + wf.name + ': ' + desc;\n        var content = Buffer.from(JSON.stringify(fullWf, null, 2)).toString('base64');\n        var putBody = { message: commitMsg, content: content, branch: CONFIG.github_branch, sha: existing.sha };\n        var putRes = await ghRequest('/repos/' + CONFIG.github_owner + '/' + CONFIG.github_repo + '/contents/' + filePath, 'PUT', JSON.stringify(putBody));\n        if (putRes.ok) { updated++; details.push(commitMsg); }\n        else { errors.push({ id: wf.id, name: wf.name, error: (putRes.data && putRes.data.message) || 'HTTP ' + putRes.status }); }\n        continue;\n      }\n    }\n\n    // New workflow — push it\n    var content = Buffer.from(JSON.stringify(fullWf, null, 2)).toString('base64');\n    var putBody = { message: 'Add ' + wf.name + ' (' + (fullWf.nodes || []).length + ' nodes)', content: content, branch: CONFIG.github_branch };\n    if (existing) putBody.sha = existing.sha;\n    var putRes = await ghRequest('/repos/' + CONFIG.github_owner + '/' + CONFIG.github_repo + '/contents/' + filePath, 'PUT', JSON.stringify(putBody));\n    if (putRes.ok) { created++; details.push('Add ' + wf.name); }\n    else { errors.push({ id: wf.id, name: wf.name, error: (putRes.data && putRes.data.message) || 'HTTP ' + putRes.status }); }\n  } catch (e) { errors.push({ id: wf.id, name: wf.name, error: e.message }); }\n}\n\nreturn [{ json: { synced: created + updated, created: created, updated: updated, skipped: skipped, errors: errors, details: details, timestamp: new Date().toISOString() } }];",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "a0b1c2d3-e4f5-6789-abcd-001d00000000",
+      "name": "Scheduled Sync",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        1400
+      ]
+    }
+  ],
+  "connections": {
+    "Setup Trigger": {
+      "main": [
+        [
+          {
+            "node": "Save Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dashboard Webhook": {
+      "main": [
+        [
+          {
+            "node": "Generate Dashboard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Dashboard": {
+      "main": [
+        [
+          {
+            "node": "Send Dashboard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Status Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Status": {
+      "main": [
+        [
+          {
+            "node": "Send Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sync All Webhook": {
+      "main": [
+        [
+          {
+            "node": "Sync All Workflows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sync All Workflows": {
+      "main": [
+        [
+          {
+            "node": "Send Sync Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sync Single Webhook": {
+      "main": [
+        [
+          {
+            "node": "Sync Single Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sync Single Workflow": {
+      "main": [
+        [
+          {
+            "node": "Send Single Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "History Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get History": {
+      "main": [
+        [
+          {
+            "node": "Send History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restore Webhook": {
+      "main": [
+        [
+          {
+            "node": "Restore Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restore Workflow": {
+      "main": [
+        [
+          {
+            "node": "Send Restore Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Scheduled Sync",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": "{\"global\":{\"github_owner\":\"YOUR_GITHUB_USERNAME\",\"github_repo\":\"n8n-workflows-backup\",\"github_branch\":\"main\",\"github_token\":\"ghp_YOUR_GITHUB_TOKEN\",\"n8n_base_url\":\"http://localhost:5678\",\"n8n_api_key\":\"YOUR_N8N_API_KEY\",\"base_path\":\"workflows\"},\"node:Schedule Trigger\":{\"recurrenceRules\":[]}}"
+}
